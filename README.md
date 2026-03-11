@@ -6,6 +6,53 @@ Arkadaşlarınla koşu rotalarını paylaş, birbirinizi koşuya davet edin!
 
 ---
 
+## 🔥 Firebase Kurulumu (Kullanıcı Girişi İçin — Ücretsiz)
+
+Bu uygulamanın çalışması için Firebase projesi oluşturman gerekiyor. Tamamen ücretsiz.
+
+### 1. Firebase Projesi Oluştur
+- https://console.firebase.google.com adresine git
+- Google hesabınla giriş yap
+- **"Proje oluştur"** (Create a project) butonuna tıkla
+- Proje adı: `runtogether` yaz
+- Google Analytics'i kapat (gerekmez) → **"Proje oluştur"**
+
+### 2. Web Uygulaması Ekle
+- Proje açıldığında ana sayfada **`</>`** (Web) ikonuna tıkla
+- Uygulama adı: `RunTogether` yaz
+- **"Firebase Hosting"** kutusunu işaretleme
+- **"Uygulamayı kaydet"** (Register app) butonuna bas
+- Ekranda çıkan `firebaseConfig` kodunu kopyala
+
+### 3. Config'i Yapıştır
+- `src/firebase.js` dosyasını aç
+- `firebaseConfig` bölümünü kopyaladığın kodla değiştir:
+
+```javascript
+const firebaseConfig = {
+  apiKey: "AIzaSy...",          // ← Firebase'den kopyala
+  authDomain: "runtogether-xxxxx.firebaseapp.com",
+  projectId: "runtogether-xxxxx",
+  storageBucket: "runtogether-xxxxx.firebasestorage.app",
+  messagingSenderId: "123456789",
+  appId: "1:123456789:web:abc..."
+};
+```
+
+### 4. Authentication'ı Aç
+- Firebase Console'da sol menüden **"Authentication"** tıkla
+- **"Başlayın"** (Get started) butonuna bas
+- **"E-posta/Şifre"** (Email/Password) sağlayıcısını aç → **Etkinleştir** → Kaydet
+
+### 5. Firestore Veritabanını Aç
+- Sol menüden **"Firestore Database"** tıkla
+- **"Veritabanı oluştur"** (Create database) butonuna bas
+- **"Test modunda başlat"** seç → Konum olarak `europe-west1` seç → **Oluştur**
+
+Bu kadar! Artık uygulama gerçek kullanıcı girişiyle çalışıyor. 🎉
+
+---
+
 ## 🚀 Vercel'e Deploy (5 Dakika, Tamamen Ücretsiz)
 
 ### Yöntem 1: GitHub üzerinden (Önerilen)
@@ -115,11 +162,12 @@ runtogether-pwa/
 
 ## ⏭️ İleri Adımlar
 
-Bu şu an mock veriyle çalışan frontend prototipi. Gerçek backend eklemek istersen:
+Firebase Auth ve Firestore entegre edildi! Sonraki geliştirmeler:
 
-1. **Firebase Firestore** → Ücretsiz, gerçek zamanlı veritabanı
-2. **Firebase Auth** → Google/Apple ile giriş
-3. **Vercel KV** → Basit key-value depolama
-4. **Supabase** → Açık kaynak Firebase alternatifi
+1. **Gerçek rota paylaşımı** → Firestore'a rota kaydetme/okuma
+2. **Gerçek davet sistemi** → Firestore + Firebase Cloud Messaging ile bildirim
+3. **Harita entegrasyonu** → Google Maps veya Leaflet ile rota çizimi
+4. **Profil fotoğrafı** → Firebase Storage ile resim yükleme
+5. **Canlı konum** → Geolocation API ile koşu takibi
 
 Bunlardan birini eklemek istersen bana sor!
