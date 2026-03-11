@@ -30,12 +30,12 @@ import {
 // (Nasıl alacağın README'de anlatılıyor)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const firebaseConfig = {
-  apiKey: "BURAYA_API_KEY",
-  authDomain: "BURAYA_PROJECT_ID.firebaseapp.com",
-  projectId: "BURAYA_PROJECT_ID",
-  storageBucket: "BURAYA_PROJECT_ID.firebasestorage.app",
-  messagingSenderId: "BURAYA_SENDER_ID",
-  appId: "BURAYA_APP_ID",
+  apiKey: "AIzaSyDqOZzfQjjwsfsnIe4o95mU6CkLEn77kqQ",
+  authDomain: "runtobesocial.firebaseapp.com",
+  projectId: "runtobesocial",
+  storageBucket: "runtobesocial.firebasestorage.app",
+  messagingSenderId: "181030402890",
+  appId: "1:181030402890:web:08a6c9d6c32f47073c5fb3",
 };
 
 const app = initializeApp(firebaseConfig);
