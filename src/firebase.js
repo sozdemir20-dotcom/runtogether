@@ -12,6 +12,16 @@ import {
   doc,
   setDoc,
   getDoc,
+  getDocs,
+  addDoc,
+  updateDoc,
+  collection,
+  query,
+  orderBy,
+  where,
+  onSnapshot,
+  arrayUnion,
+  serverTimestamp,
 } from 'firebase/firestore';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -20,12 +30,12 @@ import {
 // (Nasıl alacağın README'de anlatılıyor)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const firebaseConfig = {
-  apiKey: "AIzaSyDqOZzfQjjwsfsnIe4o95mU6CkLEn77kqQ",
-  authDomain: "runtobesocial.firebaseapp.com",
-  projectId: "runtobesocial",
-  storageBucket: "runtobesocial.firebasestorage.app",
-  messagingSenderId: "181030402890",
-  appId: "1:181030402890:web:08a6c9d6c32f47073c5fb3",
+  apiKey: "BURAYA_API_KEY",
+  authDomain: "BURAYA_PROJECT_ID.firebaseapp.com",
+  projectId: "BURAYA_PROJECT_ID",
+  storageBucket: "BURAYA_PROJECT_ID.firebasestorage.app",
+  messagingSenderId: "BURAYA_SENDER_ID",
+  appId: "BURAYA_APP_ID",
 };
 
 const app = initializeApp(firebaseConfig);
@@ -124,4 +134,72 @@ export function getErrorMessage(code) {
     'auth/network-request-failed': 'İnternet bağlantını kontrol et.',
   };
   return messages[code] || 'Bir hata oluştu. Tekrar dene.';
+}
+
+// ── Rota Fonksiyonları ──
+
+export async function createRoute(routeData, userId) {
+  const docRef = await addDoc(collection(db, 'routes'), {
+    ...routeData,
+    userId,
+    participants: [userId],
+    createdAt: serverTimestamp(),
+  });
+  return docRef.id;
+}
+
+export function onRoutesChanged(callback) {
+  const q = query(collection(db, 'routes'), orderBy('createdAt', 'desc'));
+  return onSnapshot(q, (snapshot) => {
+    const routes = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    callback(routes);
+  });
+}
+
+export async function joinRoute(routeId, userId) {
+  await updateDoc(doc(db, 'routes', routeId), {
+    participants: arrayUnion(userId),
+  });
+}
+
+// ── Davet Fonksiyonları ──
+
+export async function sendInvite(fromUserId, fromUserName, toUserId, routeId, routeTitle, message) {
+  await addDoc(collection(db, 'invites'), {
+    from: fromUserId,
+    fromName: fromUserName,
+    to: toUserId,
+    routeId,
+    routeTitle,
+    message,
+    status: 'pending',
+    createdAt: serverTimestamp(),
+  });
+}
+
+export function onInvitesChanged(userId, callback) {
+  const q = query(collection(db, 'invites'), where('to', '==', userId), orderBy('createdAt', 'desc'));
+  return onSnapshot(q, (snapshot) => {
+    const invites = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    callback(invites);
+  });
+}
+
+export async function respondToInvite(inviteId, status) {
+  await updateDoc(doc(db, 'invites', inviteId), { status });
+}
+
+// ── Kullanıcı Fonksiyonları ──
+
+export async function getAllUsers() {
+  const snapshot = await getDocs(collection(db, 'users'));
+  return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+export function onUsersChanged(callback) {
+  return onSnapshot(collection(db, 'users'), (snapshot) => {
+    const users = {};
+    snapshot.docs.forEach(d => { users[d.id] = { id: d.id, ...d.data() }; });
+    callback(users);
+  });
 }
