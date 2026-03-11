@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { COLORS, MOCK_USERS, MOCK_ROUTES, INITIAL_INVITES, FILTERS, formatDate } from './data';
+import { registerUser, loginUser, logoutUser, onUserChanged, getErrorMessage } from './firebase';
 
 /* ───────── SVG Components ───────── */
 
@@ -274,15 +275,16 @@ function CreateScreen({ onShowToast }) {
   );
 }
 
-function ProfileScreen() {
+function ProfileScreen({ user, onLogout }) {
   const weekly = [{ d: 'Pzt', km: 5.2 }, { d: 'Sal', km: 0 }, { d: 'Çar', km: 8.1 }, { d: 'Per', km: 6.3 }, { d: 'Cum', km: 0 }, { d: 'Cmt', km: 12.5 }, { d: 'Paz', km: 0 }];
 
   return (
     <div style={{ animation: 'fadeIn 0.3s ease' }}>
       <div style={{ textAlign: 'center', marginBottom: 28 }}>
         <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'linear-gradient(135deg, #F97316, #DC2626)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, margin: '0 auto 14px', boxShadow: '0 0 30px rgba(249,115,22,0.3)' }}>🏃</div>
-        <h2 style={{ margin: '0 0 2px', fontSize: 20, fontWeight: 800, color: '#fff' }}>Koşucu Profili</h2>
-        <p style={{ margin: 0, fontSize: 13, color: 'rgba(255,255,255,0.4)' }}>Orta Seviye · İstanbul</p>
+        <h2 style={{ margin: '0 0 2px', fontSize: 20, fontWeight: 800, color: '#fff' }}>{user?.name || 'Koşucu'}</h2>
+        <p style={{ margin: '0 0 4px', fontSize: 13, color: 'rgba(255,255,255,0.4)' }}>{user?.level || 'Orta Seviye'} · İstanbul</p>
+        <p style={{ margin: 0, fontSize: 12, color: 'rgba(255,255,255,0.25)' }}>{user?.email}</p>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 24 }}>
@@ -321,6 +323,167 @@ function ProfileScreen() {
           ))}
         </div>
       </div>
+
+      {/* Logout */}
+      <button onClick={onLogout} style={{ width: '100%', marginTop: 20, padding: 14, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.15)', borderRadius: 14, color: '#EF4444', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: "'Outfit', sans-serif", transition: 'all 0.2s' }}>
+        Çıkış Yap
+      </button>
+    </div>
+  );
+}
+
+/* ───────── Auth Screens ───────── */
+
+function AuthScreen({ onLogin }) {
+  const [mode, setMode] = useState('welcome'); // welcome, login, register
+  const [form, setForm] = useState({ name: '', email: '', password: '', level: 'Orta Seviye' });
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const update = (k, v) => { setForm(f => ({ ...f, [k]: v })); setError(''); };
+  const inp = { width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: '14px 16px', color: '#fff', fontSize: 15, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box', transition: 'border-color 0.2s' };
+
+  const handleSubmit = async () => {
+    if (mode === 'register' && !form.name.trim()) { setError('İsmini gir'); return; }
+    if (!form.email.trim()) { setError('E-posta adresini gir'); return; }
+    if (!form.password || form.password.length < 6) { setError('Şifre en az 6 karakter olmalı'); return; }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      let userData;
+      if (mode === 'register') {
+        userData = await registerUser(form.email, form.password, form.name, form.level);
+      } else {
+        userData = await loginUser(form.email, form.password);
+      }
+      onLogin(userData);
+    } catch (err) {
+      setError(getErrorMessage(err.code));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ── Welcome Screen ──
+  if (mode === 'welcome') {
+    return (
+      <div style={{ background: '#0F0F14', height: '100vh', color: '#fff', fontFamily: "'Outfit', system-ui, sans-serif", maxWidth: 420, margin: '0 auto', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '40px 24px', position: 'relative', overflow: 'hidden' }}>
+        <style>{`
+          @keyframes fadeSlideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+          @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+          @keyframes pulse { 0%,100% { opacity: 0.3; } 50% { opacity: 0.6; } }
+          input::placeholder { color: rgba(255,255,255,0.2); }
+          input:focus { border-color: rgba(249,115,22,0.5) !important; }
+        `}</style>
+
+        {/* Background decoration */}
+        <div style={{ position: 'absolute', top: -60, right: -40, width: 200, height: 200, borderRadius: '50%', background: 'radial-gradient(circle, rgba(249,115,22,0.12) 0%, transparent 70%)', animation: 'pulse 4s ease infinite' }} />
+        <div style={{ position: 'absolute', bottom: -80, left: -60, width: 250, height: 250, borderRadius: '50%', background: 'radial-gradient(circle, rgba(220,38,38,0.08) 0%, transparent 70%)', animation: 'pulse 5s ease infinite 1s' }} />
+
+        {/* Logo */}
+        <div style={{ textAlign: 'center', marginBottom: 48, animation: 'fadeSlideUp 0.6s ease' }}>
+          <div style={{ width: 80, height: 80, borderRadius: 22, background: 'linear-gradient(135deg, #F97316, #DC2626)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40, fontWeight: 800, color: '#fff', margin: '0 auto 20px', boxShadow: '0 12px 40px rgba(249,115,22,0.35)', animation: 'float 3s ease infinite' }}>R</div>
+          <h1 style={{ margin: '0 0 8px', fontSize: 32, fontWeight: 800, letterSpacing: -1 }}>RunTogether</h1>
+          <p style={{ margin: 0, fontSize: 15, color: 'rgba(255,255,255,0.45)', lineHeight: 1.5 }}>Rotanı paylaş, arkadaşlarını davet et,<br/>birlikte koş!</p>
+        </div>
+
+        {/* Feature pills */}
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 48, flexWrap: 'wrap', animation: 'fadeSlideUp 0.6s ease 0.1s both' }}>
+          {['🗺️ Rota Paylaş', '✉️ Davet At', '📊 İstatistik'].map(f => (
+            <span key={f} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 20, padding: '6px 14px', fontSize: 12, color: 'rgba(255,255,255,0.5)', fontWeight: 500 }}>{f}</span>
+          ))}
+        </div>
+
+        {/* Buttons */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, animation: 'fadeSlideUp 0.6s ease 0.2s both' }}>
+          <button onClick={() => setMode('register')} style={{ width: '100%', padding: 16, background: 'linear-gradient(135deg, #F97316, #EA580C)', border: 'none', borderRadius: 14, color: '#fff', fontSize: 16, fontWeight: 700, cursor: 'pointer', fontFamily: "'Outfit', sans-serif", letterSpacing: 0.3, boxShadow: '0 4px 20px rgba(249,115,22,0.3)' }}>
+            Hesap Oluştur
+          </button>
+          <button onClick={() => setMode('login')} style={{ width: '100%', padding: 16, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 14, color: 'rgba(255,255,255,0.8)', fontSize: 16, fontWeight: 600, cursor: 'pointer', fontFamily: "'Outfit', sans-serif" }}>
+            Giriş Yap
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Login / Register Screen ──
+  const isRegister = mode === 'register';
+
+  return (
+    <div style={{ background: '#0F0F14', height: '100vh', color: '#fff', fontFamily: "'Outfit', system-ui, sans-serif", maxWidth: 420, margin: '0 auto', display: 'flex', flexDirection: 'column', padding: '0 24px', overflow: 'auto' }}>
+      <style>{`
+        @keyframes fadeSlideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+        input::placeholder { color: rgba(255,255,255,0.2); }
+        input:focus { border-color: rgba(249,115,22,0.5) !important; }
+      `}</style>
+
+      {/* Back button */}
+      <div style={{ paddingTop: 'max(16px, env(safe-area-inset-top))', marginBottom: 8 }}>
+        <button onClick={() => { setMode('welcome'); setError(''); }} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: 14, cursor: 'pointer', padding: '8px 0', display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'inherit' }}>
+          ← Geri
+        </button>
+      </div>
+
+      {/* Header */}
+      <div style={{ marginBottom: 32, animation: 'fadeSlideUp 0.4s ease' }}>
+        <div style={{ width: 52, height: 52, borderRadius: 14, background: 'linear-gradient(135deg, #F97316, #DC2626)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, fontWeight: 800, color: '#fff', marginBottom: 20, boxShadow: '0 8px 24px rgba(249,115,22,0.25)' }}>R</div>
+        <h1 style={{ margin: '0 0 6px', fontSize: 26, fontWeight: 800 }}>{isRegister ? 'Hesap Oluştur' : 'Tekrar Hoş Geldin'}</h1>
+        <p style={{ margin: 0, fontSize: 14, color: 'rgba(255,255,255,0.4)' }}>{isRegister ? 'Koşu topluluğuna katıl!' : 'Hesabına giriş yap'}</p>
+      </div>
+
+      {/* Form */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14, animation: 'fadeSlideUp 0.4s ease 0.1s both' }}>
+        {isRegister && (
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.5)', letterSpacing: 0.5, marginBottom: 6, display: 'block' }}>AD SOYAD</label>
+            <input value={form.name} onChange={e => update('name', e.target.value)} style={inp} placeholder="Adın Soyadın" autoComplete="name" />
+          </div>
+        )}
+
+        <div>
+          <label style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.5)', letterSpacing: 0.5, marginBottom: 6, display: 'block' }}>E-POSTA</label>
+          <input value={form.email} onChange={e => update('email', e.target.value)} style={inp} placeholder="ornek@email.com" type="email" autoComplete="email" />
+        </div>
+
+        <div>
+          <label style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.5)', letterSpacing: 0.5, marginBottom: 6, display: 'block' }}>ŞİFRE</label>
+          <input value={form.password} onChange={e => update('password', e.target.value)} style={inp} placeholder="En az 6 karakter" type="password" autoComplete={isRegister ? 'new-password' : 'current-password'} />
+        </div>
+
+        {isRegister && (
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.5)', letterSpacing: 0.5, marginBottom: 8, display: 'block' }}>KOŞU SEVİYEN</label>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {['Başlangıç', 'Orta Seviye', 'İleri Seviye'].map(l => (
+                <button key={l} onClick={() => update('level', l)} style={{ flex: 1, padding: '10px 4px', borderRadius: 10, border: `1px solid ${form.level === l ? '#F97316' : 'rgba(255,255,255,0.08)'}`, background: form.level === l ? 'rgba(249,115,22,0.15)' : 'rgba(255,255,255,0.03)', color: form.level === l ? '#F97316' : 'rgba(255,255,255,0.5)', fontSize: 11, fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' }}>{l}</button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Error */}
+        {error && (
+          <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#EF4444', fontWeight: 500 }}>
+            {error}
+          </div>
+        )}
+
+        {/* Submit */}
+        <button onClick={handleSubmit} disabled={loading} style={{ width: '100%', padding: 16, marginTop: 4, background: loading ? 'rgba(249,115,22,0.5)' : 'linear-gradient(135deg, #F97316, #EA580C)', border: 'none', borderRadius: 14, color: '#fff', fontSize: 16, fontWeight: 700, cursor: loading ? 'wait' : 'pointer', fontFamily: "'Outfit', sans-serif", letterSpacing: 0.3, boxShadow: '0 4px 20px rgba(249,115,22,0.25)', transition: 'all 0.2s' }}>
+          {loading ? '...' : isRegister ? 'Kayıt Ol' : 'Giriş Yap'}
+        </button>
+
+        {/* Switch mode */}
+        <p style={{ textAlign: 'center', fontSize: 13, color: 'rgba(255,255,255,0.4)', marginTop: 8 }}>
+          {isRegister ? 'Zaten hesabın var mı? ' : 'Hesabın yok mu? '}
+          <button onClick={() => { setMode(isRegister ? 'login' : 'register'); setError(''); }} style={{ background: 'none', border: 'none', color: '#F97316', fontWeight: 600, cursor: 'pointer', fontSize: 13, fontFamily: 'inherit', padding: 0 }}>
+            {isRegister ? 'Giriş Yap' : 'Kayıt Ol'}
+          </button>
+        </p>
+      </div>
     </div>
   );
 }
@@ -328,15 +491,52 @@ function ProfileScreen() {
 /* ───────── Main App ───────── */
 
 export default function App() {
+  const [user, setUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [tab, setTab] = useState('feed');
   const [toast, setToast] = useState(null);
   const toastTimer = useRef(null);
+
+  // Firebase auth state listener — oturum açıksa otomatik giriş yapar
+  useEffect(() => {
+    const unsubscribe = onUserChanged((userData) => {
+      setUser(userData);
+      setAuthLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
 
   const showToast = useCallback((msg) => {
     setToast(msg);
     clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToast(null), 2500);
   }, []);
+
+  const handleLogin = (userData) => {
+    setUser(userData);
+    showToast(`Hoş geldin, ${userData.name}! 🏃`);
+  };
+
+  const handleLogout = async () => {
+    await logoutUser();
+    setUser(null);
+    setTab('feed');
+  };
+
+  // ── Loading Screen ──
+  if (authLoading) {
+    return (
+      <div style={{ background: '#0F0F14', height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: "'Outfit', sans-serif", maxWidth: 420, margin: '0 auto' }}>
+        <div style={{ width: 56, height: 56, borderRadius: 16, background: 'linear-gradient(135deg, #F97316, #DC2626)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, fontWeight: 800, color: '#fff', marginBottom: 16, animation: 'pulse 1.5s ease infinite' }}>R</div>
+        <style>{`@keyframes pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.7; transform: scale(0.95); } }`}</style>
+      </div>
+    );
+  }
+
+  // ── Auth Gate ──
+  if (!user) {
+    return <AuthScreen onLogin={handleLogin} />;
+  }
 
   const pendingInvites = INITIAL_INVITES.filter(i => i.status === 'pending').length;
 
@@ -376,7 +576,7 @@ export default function App() {
         {tab === 'feed' && <FeedScreen onShowToast={showToast} />}
         {tab === 'invites' && <InvitesScreen onShowToast={showToast} />}
         {tab === 'create' && <CreateScreen onShowToast={showToast} />}
-        {tab === 'profile' && <ProfileScreen />}
+        {tab === 'profile' && <ProfileScreen user={user} onLogout={handleLogout} />}
       </div>
 
       {/* Tab Bar */}
